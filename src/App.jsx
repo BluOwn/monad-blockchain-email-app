@@ -220,7 +220,7 @@ export default function App() {
             className="logo"
           />
         </div>
-        <h1 className="app-title">📧 Blockchain Email</h1>
+        <h1 className="app-title">📧 Monad Blockchain Email</h1>
 
         {isConnected && (
           <div className="profile-card">
