@@ -39,6 +39,12 @@ export default function App() {
   }, [isConnected, signer]);
 
   const init = async () => {
+    if (!contractAddress) {
+      alert("Contract address is not configured. Please check environment variables.");
+      console.error("VITE_CONTRACT_ADDRESS is missing:", import.meta.env.VITE_CONTRACT_ADDRESS);
+      return;
+    }
+
     if (window.ethereum) {
       try {
         const prov = new ethers.BrowserProvider(window.ethereum);
@@ -56,7 +62,7 @@ export default function App() {
         alert("Failed to connect to MetaMask. Please try again.");
       }
     } else {
-      alert("MetaMask not found!");
+      alert("MetaMask not found! Please install MetaMask.");
     }
   };
 
