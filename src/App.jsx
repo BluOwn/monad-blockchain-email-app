@@ -1,195 +1,139 @@
 import { useState, useEffect } from "react";
-import { ethers } from "ethers";
 import { uploadToPinata } from "./uploadToPinata";
-import { contractABI } from "./contractABI";
+import { encryptMessage, decryptMessage } from "./services/encryptionService";
+import blockchainService from "./services/blockchainService";
 import "./App.css";
 
-const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
+// Import components
+import Profile from "./components/Profile";
+import EmailForm from "./components/EmailForm";
+import Inbox from "./components/Inbox";
+import MessagePopup from "./components/MessagePopup";
 
 export default function App() {
-  const [provider, setProvider] = useState(null);
-  const [signer, setSigner] = useState(null);
-  const [contract, setContract] = useState(null);
-  const [recipient, setRecipient] = useState("");
-  const [message, setMessage] = useState("");
-  const [password, setPassword] = useState("");
-  const [inbox, setInbox] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
-  const [popupMessage, setPopupMessage] = useState("");
-  const [decryptPasswords, setDecryptPasswords] = useState({});
-  const [currentPage, setCurrentPage] = useState(1);
   const [walletAddress, setWalletAddress] = useState("");
   const [displayName, setDisplayName] = useState(localStorage.getItem("displayName") || "");
-  const [copyFeedback, setCopyFeedback] = useState("");
-  const emailsPerPage = 5;
+  const [isConnected, setIsConnected] = useState(false);
+  const [inbox, setInbox] = useState([]);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
+  // Check if wallet is already connected on page load
   useEffect(() => {
-    if (isConnected && signer) {
-      const fetchAddress = async () => {
-        try {
-          const address = await signer.getAddress();
-          setWalletAddress(address);
-        } catch (err) {
-          console.error("Error fetching wallet address:", err);
-        }
-      };
-      fetchAddress();
-    }
-  }, [isConnected, signer]);
-
-  const init = async () => {
-    if (!contractAddress) {
-      alert("Contract address is not configured. Please check environment variables.");
-      console.error("VITE_CONTRACT_ADDRESS is missing:", import.meta.env.VITE_CONTRACT_ADDRESS);
-      return;
-    }
-
-    if (window.ethereum) {
+    const checkWalletConnection = async () => {
       try {
-        const prov = new ethers.BrowserProvider(window.ethereum);
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const signer = await prov.getSigner();
-        const contract = new ethers.Contract(contractAddress, contractABI, signer);
-
-        setProvider(prov);
-        setSigner(signer);
-        setContract(contract);
-        setIsConnected(true);
-        console.log("Connected to wallet:", await signer.getAddress());
-      } catch (err) {
-        console.error("Error connecting to wallet:", err);
-        alert("Failed to connect to MetaMask. Please try again.");
+        const connected = await blockchainService.checkConnection();
+        if (connected) {
+          setIsConnected(true);
+          const address = await blockchainService.getWalletAddress();
+          setWalletAddress(address);
+        }
+      } catch (error) {
+        console.error("Error checking wallet connection:", error);
       }
-    } else {
-      alert("MetaMask not found! Please install MetaMask.");
-    }
-  };
-
-  const disconnect = () => {
-    setProvider(null);
-    setSigner(null);
-    setContract(null);
-    setIsConnected(false);
-    setInbox([]);
-    setWalletAddress("");
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
-  };
-
-  const copyAddress = () => {
-    navigator.clipboard.writeText(walletAddress);
-    setCopyFeedback("Copied!");
-    setTimeout(() => setCopyFeedback(""), 2000);
-  };
-
-  const handleDisplayNameChange = (value) => {
-    setDisplayName(value);
-    localStorage.setItem("displayName", value);
-  };
-
-  const encryptMessage = async (text, password) => {
-    const enc = new TextEncoder();
-    const keyMaterial = await window.crypto.subtle.importKey(
-      "raw",
-      enc.encode(password),
-      "PBKDF2",
-      false,
-      ["deriveKey"]
-    );
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const key = await window.crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt,
-        iterations: 100000,
-        hash: "SHA-256"
-      },
-      keyMaterial,
-      { name: "AES-GCM", length: 256 },
-      true,
-      ["encrypt"]
-    );
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await window.crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
-      key,
-      enc.encode(text)
-    );
-    return {
-      iv: Array.from(iv),
-      salt: Array.from(salt),
-      ciphertext: Array.from(new Uint8Array(encrypted))
     };
-  };
+    
+    checkWalletConnection();
+  }, []);
 
-  const decryptMessage = async (data, password) => {
-    const enc = new TextEncoder();
-    const dec = new TextDecoder();
-    const keyMaterial = await window.crypto.subtle.importKey(
-      "raw",
-      enc.encode(password),
-      "PBKDF2",
-      false,
-      ["deriveKey"]
-    );
-    const key = await window.crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt: new Uint8Array(data.salt),
-        iterations: 100000,
-        hash: "SHA-256"
-      },
-      keyMaterial,
-      { name: "AES-GCM", length: 256 },
-      true,
-      ["decrypt"]
-    );
-    const decrypted = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: new Uint8Array(data.iv) },
-      key,
-      new Uint8Array(data.ciphertext)
-    );
-    return dec.decode(decrypted);
-  };
-
-  const sendEmail = async () => {
-    if (!contract || !recipient || !message || !password) return alert("All fields are required.");
-    const encrypted = await encryptMessage(message, password);
-    const ipfsHash = await uploadToPinata(encrypted);
-    const tx = await contract.sendEmail(recipient, ipfsHash);
-    await tx.wait();
-    alert("Message sent!");
-    setRecipient("");
-    setMessage("");
-    setPassword("");
-  };
-
-  const loadInbox = async () => {
-    if (!contract) return;
-    console.log("Loading inbox...");
+  const handleConnect = async () => {
+    setError("");
+    setIsLoading(true);
+    
     try {
-      const data = await contract.getInbox();
-      console.log("Inbox loaded:", data);
-      setInbox([...data].reverse());
+      const { address } = await blockchainService.connect();
+      setWalletAddress(address);
+      setIsConnected(true);
+      console.log("Connected to wallet:", address);
     } catch (err) {
-      console.error("Error loading inbox:", err);
+      setError(err.message || "Failed to connect wallet");
+      console.error("Error connecting to wallet:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const decryptEmail = async (hash, index) => {
-    const password = decryptPasswords[index];
-    if (!password) return alert("Enter decryption password.");
+  const handleDisconnect = () => {
+    blockchainService.disconnect();
+    setIsConnected(false);
+    setWalletAddress("");
+    setInbox([]);
+  };
+
+  const handleSendEmail = async (recipient, message, password) => {
+    setError("");
+    setIsLoading(true);
+    
     try {
-      const res = await fetch(`https://gateway.pinata.cloud/ipfs/${hash}`);
-      const json = await res.json();
-      const msg = await decryptMessage(json, password);
-      setPopupMessage(msg);
-      setShowPopup(true);
+      // Encrypt the message
+      const encrypted = await encryptMessage(message, password);
+      
+      // Upload to IPFS via Pinata
+      const ipfsHash = await uploadToPinata(encrypted);
+      
+      // Send transaction to blockchain
+      await blockchainService.sendEmail(recipient, ipfsHash);
+      
+      alert("Message sent successfully!");
+      return true;
     } catch (err) {
-      alert("Decryption failed. Check your password.");
-      console.error("Decryption error:", err);
+      setError(err.message || "Failed to send message");
+      console.error("Error sending email:", err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoadInbox = async () => {
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      const data = await blockchainService.getInbox();
+      console.log("Inbox loaded:", data);
+      setInbox([...data].reverse()); // Display newest first
+      return true;
+    } catch (err) {
+      setError(err.message || "Failed to load inbox");
+      console.error("Error loading inbox:", err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDecryptEmail = async (hash, password) => {
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      // Fetch message from IPFS
+      const ipfsGateway = import.meta.env.VITE_IPFS_GATEWAY || "https://gateway.pinata.cloud/ipfs/";
+      const res = await fetch(`${ipfsGateway}${hash}`);
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch message: ${res.status}`);
+      }
+      
+      const json = await res.json();
+      
+      // Decrypt the message
+      const message = await decryptMessage(json, password);
+      
+      // Show popup with decrypted message
+      setPopupMessage(message);
+      setShowPopup(true);
+      
+      return true;
+    } catch (err) {
+      setError(err.message || "Failed to decrypt message");
+      console.error("Error decrypting email:", err);
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -197,18 +141,6 @@ export default function App() {
     setShowPopup(false);
     setPopupMessage("");
   };
-
-  const handlePasswordChange = (index, value) => {
-    setDecryptPasswords((prev) => ({ ...prev, [index]: value }));
-  };
-
-  // Pagination logic
-  const indexOfLastEmail = currentPage * emailsPerPage;
-  const indexOfFirstEmail = indexOfLastEmail - emailsPerPage;
-  const currentEmails = inbox.slice(indexOfFirstEmail, indexOfLastEmail);
-  const totalPages = Math.ceil(inbox.length / emailsPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
     <div className="app-container">
@@ -222,129 +154,36 @@ export default function App() {
         </div>
         <h1 className="app-title">📧 Monad Blockchain Email</h1>
 
+        {error && <div className="error-message">{error}</div>}
+
         {isConnected && (
-          <div className="profile-card">
-            <h2 className="profile-title">{displayName || "User Profile"}</h2>
-            <p className="profile-address">
-              <span>Wallet:</span> {walletAddress}
-            </p>
-            <div className="profile-actions">
-              <input
-                type="text"
-                placeholder="Set display name"
-                value={displayName}
-                onChange={(e) => handleDisplayNameChange(e.target.value)}
-                className="profile-input"
-              />
-              <button onClick={copyAddress} className="copy-button">
-                {copyFeedback || "Copy Address"}
-              </button>
-              <button onClick={disconnect} className="disconnect-button">
-                Disconnect Wallet
-              </button>
-            </div>
-          </div>
+          <Profile
+            displayName={displayName}
+            setDisplayName={setDisplayName}
+            walletAddress={walletAddress}
+            disconnect={handleDisconnect}
+          />
         )}
 
-        <div className="email-form">
-          <button
-            onClick={isConnected ? disconnect : init}
-            className="connect-button"
-          >
-            {isConnected ? "Disconnect Wallet" : "Connect Wallet"}
-          </button>
-          <input
-            placeholder="Recipient address (0x...)"
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            className="input-field"
-          />
-          <textarea
-            placeholder="Your message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="textarea-field"
-          />
-          <input
-            type="password"
-            placeholder="Encryption password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input-field"
-          />
-          <button onClick={sendEmail} className="send-button">
-            Send Message
-          </button>
-        </div>
+        <EmailForm
+          isConnected={isConnected}
+          onConnect={handleConnect}
+          onDisconnect={handleDisconnect}
+          onSendEmail={handleSendEmail}
+        />
 
-        <div className="inbox-section">
-          <button onClick={loadInbox} className="load-inbox-button">
-            Load Inbox
-          </button>
-          {currentEmails.length > 0 ? (
-            <table className="email-table">
-              <thead>
-                <tr>
-                  <th>From</th>
-                  <th>Time</th>
-                  <th>Decrypt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentEmails.map((item, i) => (
-                  <tr key={i}>
-                    <td>{item.sender}</td>
-                    <td>{new Date(Number(item.timestamp) * 1000).toLocaleString()}</td>
-                    <td>
-                      <div className="decrypt-group">
-                        <input
-                          type="password"
-                          placeholder="Password"
-                          value={decryptPasswords[indexOfFirstEmail + i] || ""}
-                          onChange={(e) => handlePasswordChange(indexOfFirstEmail + i, e.target.value)}
-                          className="decrypt-input"
-                        />
-                        <button
-                          onClick={() => decryptEmail(item.ipfsHash, indexOfFirstEmail + i)}
-                          className="decrypt-button"
-                        >
-                          Decrypt
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="no-emails">No emails found.</p>
-          )}
-
-          {totalPages > 1 && (
-            <div className="pagination">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => paginate(i + 1)}
-                  className={currentPage === i + 1 ? "pagination-button active" : "pagination-button"}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <Inbox
+          emails={inbox}
+          onLoadInbox={handleLoadInbox}
+          onDecryptEmail={handleDecryptEmail}
+          isConnected={isConnected}
+        />
 
         {showPopup && (
-          <div className="popup-overlay">
-            <div className="popup-content">
-              <h2>Decrypted Message</h2>
-              <p>{popupMessage}</p>
-              <button onClick={closePopup} className="close-popup-button">
-                Close
-              </button>
-            </div>
-          </div>
+          <MessagePopup
+            message={popupMessage}
+            onClose={closePopup}
+          />
         )}
 
         <footer className="footer">
