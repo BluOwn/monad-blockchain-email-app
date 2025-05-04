@@ -64,7 +64,6 @@ body {
   font-weight: 700;
   color: var(--color-text-primary);
   margin-bottom: var(--spacing-xl);
-  text-shadow: var(--shadow-sm);
 }
 
 .error-message {
@@ -77,7 +76,6 @@ body {
   text-align: left;
 }
 
-/* Profile Component */
 .profile-card {
   background-color: var(--bg-secondary);
   padding: var(--spacing-lg);
@@ -101,7 +99,6 @@ body {
 
 .profile-address span {
   font-weight: 500;
-  color: var(--color-text-primary);
 }
 
 .profile-actions {
@@ -127,7 +124,6 @@ body {
   box-shadow: 0 0 8px rgba(124, 58, 237, 0.4);
 }
 
-/* Button Styles */
 .copy-button,
 .disconnect-button,
 .connect-button,
@@ -226,46 +222,6 @@ button:disabled {
 .email-table td {
   padding: var(--spacing-md);
   text-align: left;
-  border-bottom: 1px solid rgba(167, 139, 250, 0.2);
-}
-
-.email-table th {
-  background-color: rgba(124, 58, 237, 0.2);
-  color: var(--color-text-primary);
-  font-weight: 500;
-  font-size: 1rem;
-}
-
-.email-table tr:nth-child(even) {
-  background-color: rgba(26, 28, 27, 0.2);
-}
-
-.email-table tr:hover {
-  background-color: rgba(124, 58, 237, 0.1);
-  transition: background-color var(--transition-default);
-}
-
-.email-table td {
-  font-size: 0.875rem;
-}
-
-.decrypt-group {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.decrypt-input {
-  flex: 1;
-  margin: 0;
-  padding: 8px;
-  font-size: 0.875rem;
-}
-
-.decrypt-button {
-  width: auto;
-  padding: 8px 16px;
-  font-size: 0.875rem;
 }
 
 .no-emails {
@@ -303,182 +259,4 @@ button:disabled {
 .pagination-button.active {
   background-color: var(--color-accent);
   color: var(--color-text-primary);
-}
-
-/* Message Popup */
-.popup-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.popup-content {
-  background-color: var(--bg-primary);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  max-width: 500px;
-  width: 100%;
-  animation: slideIn 0.3s ease-in-out;
-}
-
-.popup-content h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-md);
-}
-
-.message-content {
-  font-size: 1rem;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-lg);
-  text-align: left;
-  max-height: 400px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-  background-color: var(--input-bg);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-sm);
-}
-
-/* Footer */
-.footer {
-  background-color: var(--bg-secondary);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  margin-top: var(--spacing-xl);
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-}
-
-.footer p {
-  margin: var(--spacing-sm) 0;
-}
-
-.footer span {
-  color: var(--color-text-primary);
-  font-weight: 500;
-}
-
-.footer a {
-  color: #a78bfa;
-  text-decoration: none;
-  transition: color var(--transition-default);
-}
-
-.footer a:hover {
-  color: var(--color-accent);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* Loading Component */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-md);
-}
-
-.loading-spinner {
-  border: 4px solid rgba(124, 58, 237, 0.1);
-  border-radius: 50%;
-  border-top: 4px solid var(--color-accent);
-  animation: spin 1s linear infinite;
-}
-
-.loading-message {
-  margin-top: var(--spacing-md);
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .app-container {
-    padding: var(--spacing-md);
-  }
-  
-  .app-title {
-    font-size: 1.75rem;
-  }
-  
-  .email-table th,
-  .email-table td {
-    padding: var(--spacing-sm);
-  }
-  
-  .decrypt-group {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .decrypt-button {
-    width: 100%;
-  }
-  
-  .popup-content {
-    width: 90%;
-    padding: var(--spacing-lg);
-  }
-  
-  .profile-actions {
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 480px) {
-  .app-title {
-    font-size: 1.5rem;
-  }
-  
-  .logo {
-    width: 200px;
-    height: 120px;
-  }
-  
-  .email-table {
-    font-size: 0.75rem;
-  }
-  
-  .profile-title,
-  .popup-content h2 {
-    font-size: 1.25rem;
-  }
 }
