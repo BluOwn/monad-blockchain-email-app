@@ -19,7 +19,7 @@ export default function App() {
   const [popupMessage, setPopupMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("compose"); // For tab navigation
+  const [activeTab, setActiveTab] = useState("compose");
 
   // Check if wallet is already connected on page load
   useEffect(() => {
@@ -35,14 +35,13 @@ export default function App() {
         console.error("Error checking wallet connection:", error);
       }
     };
-    
     checkWalletConnection();
   }, []);
 
   const handleConnect = async () => {
     setError("");
     setIsLoading(true);
-    
+
     try {
       const { address } = await blockchainService.connect();
       setWalletAddress(address);
@@ -66,17 +65,17 @@ export default function App() {
   const handleSendEmail = async (recipient, message, password) => {
     setError("");
     setIsLoading(true);
-    
+
     try {
       // Encrypt the message
       const encrypted = await encryptMessage(message, password);
-      
+
       // Upload to IPFS via Pinata
       const ipfsHash = await uploadToPinata(encrypted);
-      
+
       // Send transaction to blockchain
       await blockchainService.sendEmail(recipient, ipfsHash);
-      
+
       setPopupMessage("Message sent successfully!");
       setShowPopup(true);
       return true;
@@ -92,7 +91,7 @@ export default function App() {
   const handleLoadInbox = async () => {
     setError("");
     setIsLoading(true);
-    
+
     try {
       const data = await blockchainService.getInbox();
       console.log("Inbox loaded:", data);
@@ -110,22 +109,20 @@ export default function App() {
   const handleDecryptEmail = async (hash, password) => {
     setError("");
     setIsLoading(true);
-    
+
     try {
-      // Attempt multiple IPFS gateways
       const gateways = [
         import.meta.env.VITE_IPFS_GATEWAY || "https://gateway.pinata.cloud/ipfs/",
         "https://ipfs.io/ipfs/",
         "https://cloudflare-ipfs.com/ipfs/"
       ];
-      
+
       let json = null;
       let fetchError = null;
-      
+
       for (const gateway of gateways) {
         try {
           const res = await fetch(`${gateway}${hash}`);
-          
           if (res.ok) {
             json = await res.json();
             break;
@@ -135,18 +132,16 @@ export default function App() {
           console.warn(`Failed to fetch from ${gateway}: ${err.message}`);
         }
       }
-      
+
       if (!json) {
         throw new Error(fetchError ? `Failed to fetch message: ${fetchError.message}` : "Failed to fetch message from IPFS");
       }
-      
-      // Decrypt the message
+
       const message = await decryptMessage(json, password);
-      
-      // Show popup with decrypted message
+
       setPopupMessage(message);
       setShowPopup(true);
-      
+
       return true;
     } catch (err) {
       setError(err.message || "Failed to decrypt message");
@@ -184,8 +179,7 @@ export default function App() {
             disconnect={handleDisconnect}
           />
         )}
-        
-        {/* Tabbed Interface (only when connected) */}
+
         {isConnected && (
           <div className="email-form" style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', marginBottom: '20px', borderBottom: '1px solid #6d28d9' }}>
@@ -214,7 +208,7 @@ export default function App() {
                 View Inbox
               </button>
             </div>
-            
+
             {activeTab === "compose" ? (
               <EmailForm
                 isConnected={isConnected}
@@ -232,8 +226,7 @@ export default function App() {
             )}
           </div>
         )}
-        
-        {/* Only show the EmailForm when not connected */}
+
         {!isConnected && (
           <div style={{ textAlign: 'center', marginBottom: '30px' }}>
             <h2 style={{ 
@@ -251,15 +244,14 @@ export default function App() {
             }}>
               Secure, decentralized, and private email communication using blockchain technology and client-side encryption.
             </p>
-            
+
             <EmailForm
               isConnected={isConnected}
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
               onSendEmail={handleSendEmail}
             />
-            
-            {/* Feature Cards */}
+
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
